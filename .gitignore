@@ -1,0 +1,17 @@
+# Images
+*.png
+
+# Build artifacts
+*.o
+*.obj
+*.exe
+*.out
+build/
+bin/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
