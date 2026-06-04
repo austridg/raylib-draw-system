@@ -39,8 +39,7 @@ struct Animations {
 class Animation {
 private:
     std::string name;
-    int id; // might not keep
-    const std::string& texturePath;
+    int id; // may not keep
     std::vector<Frame> frames;
     bool isPlaying;
 
@@ -50,7 +49,7 @@ private:
     AnimRule rules;
 public:
 
-    Animation(std::string anim_name,const std::vector<Frame> f,const std::string& texture_path,AnimRule& anim_rule);
+    Animation(std::string anim_name,const std::vector<Frame> f,AnimRule& anim_rule);
 
     const std::string& getName();
     void createId(int anim_id);

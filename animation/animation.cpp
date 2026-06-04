@@ -16,8 +16,8 @@ Animation* Animations::getAnimation(const std::string& anim_name) {
     return index.at(anim_name);
 }
 
-Animation::Animation(std::string anim_name,const std::vector<Frame> f,const std::string& texture_path,AnimRule& anim_rule)
-    : name(anim_name),frames(f),id(-1),texturePath(texture_path),rules(anim_rule), isPlaying(false),currentFrameIdx(0),animAccumulator(0.f) {}
+Animation::Animation(std::string anim_name,const std::vector<Frame> f,AnimRule& anim_rule)
+    : name(anim_name),frames(f),id(-1),rules(anim_rule), isPlaying(false),currentFrameIdx(0),animAccumulator(0.f) {}
 
 const std::string& Animation::getName() { return name; }
 

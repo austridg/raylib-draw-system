@@ -5,10 +5,14 @@
 #include <string>
 #include <utility>
 #include <stdio.h>
+#include <memory>
 
-#include "sprite.h"
+#include "../animation/animation.h"
 
 #include "raylib.h"
+
+// TODO: Add type maps and asset registry
+// std::unordered_map<std::string,std::shared_ptr<>>;
 
 /*
 === Drawable ===
@@ -23,43 +27,15 @@ draw it and what animations it holds.
 class Drawable {
 private:
     std::string drawableName;
-    Texture2D texture;
 
-    int positionX, positionY;
-    int width, height;
-    int z; // layer variable (draw order)
+    int positionX, positionY, layerZ;
+    int drawableWidth, drawableHeight;
 
     Animations animationList;
 public:
-
+    Drawable();
+    Drawable(const std::string& name,int x,int y,int z,int width,int height);
+    ~Drawable();
 
     void addAnimation(const Animation& animation);
-};
-
-/*
-=== Group ===
-
-=== === ===
-*/
-struct Group {
-    std::string groupName;
-    std::unordered_map<std::string,Drawable*> Drawables;
-
-    Group(const std::string& name);
-
-    void addDrawable(const Drawable& drawable);
-    void removeDrawable(const std::string& name);
-};
-
-/*
-=== Draw System ===
-Holds all Drawables and Drawable Groups
-=== === === === ===
-*/
-class DrawSystem {
-private:
-
-
-public:
-
 };
