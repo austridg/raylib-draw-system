@@ -23,8 +23,17 @@ draw it and what animations it holds.
 class Drawable {
 private:
     std::string drawableName;
+    Texture2D texture;
+
+    int positionX, positionY;
+    int width, height;
     int z; // layer variable (draw order)
-    Sprite drawableSprite;
+
+    Animations animationList;
+public:
+
+
+    void addAnimation(const Animation& animation);
 };
 
 /*
@@ -34,13 +43,12 @@ private:
 */
 struct Group {
     std::string groupName;
-    int groupId;
-    std::unordered_map<int,Drawable&> Drawables;
+    std::unordered_map<std::string,Drawable*> Drawables;
 
-    Group(const std::string name);
+    Group(const std::string& name);
 
     void addDrawable(const Drawable& drawable);
-    void removeDrawable(int id);
+    void removeDrawable(const std::string& name);
 };
 
 /*

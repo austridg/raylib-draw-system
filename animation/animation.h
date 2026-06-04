@@ -31,13 +31,15 @@ struct Animations {
     std::unordered_map<std::string,Animation*> index;
 
     void addAnimation(Animation& animation);
-    Animation* getAnimation(const std::string& anim_name);
+    Animation* getAnimation(const std::string& anim_name); // NOTE: find way to use ints instead of string
+
+    // TODO: Add constructor
 };
 
 class Animation {
 private:
     std::string name;
-    int id;
+    int id; // might not keep
     const std::string& texturePath;
     std::vector<Frame> frames;
     bool isPlaying;

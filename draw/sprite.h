@@ -15,7 +15,7 @@ private:
     std::string name;
     Texture2D texture; // !!!: Maybe just do texture path and load texture in higher draw class
 
-    // int positionX, positionY;   NOTE: We're going to put coords in GameObject
+    // int positionX, positionY
     int width, height;
 
     Animations animationList;
