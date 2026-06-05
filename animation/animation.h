@@ -5,6 +5,7 @@
 #include <string>
 #include <utility>
 #include <stdio.h>
+#include <memory>
 
 #include "raylib.h"
 
@@ -23,37 +24,45 @@ struct AnimRule {
   AnimRule(bool repeat);
 };
 
-class Animation; // forward declaration because they're cool
-
-// holds all animations
-struct Animations {
-    int total;
-    std::unordered_map<std::string,Animation*> index;
-
-    void addAnimation(Animation& animation);
-    Animation* getAnimation(const std::string& anim_name); // NOTE: find way to use ints instead of string
-
-    // TODO: Add constructor
-};
-
 class Animation {
 private:
     std::string name;
-    int id; // may not keep
     std::vector<Frame> frames;
+public:
+    AnimRule rules;
+
+    Animation(std::string anim_name,const std::vector<Frame>& f,AnimRule& anim_rule);
+    const std::vector<Frame>& getFrames();
+};
+
+class AnimationRegistry {
+private:
+    std::unordered_map<int,std::shared_ptr<Animation>> registry;
+public:
+    void add(int id,std::shared_ptr<Animation> anim);
+    std::shared_ptr<Animation> get(int id);
+};
+
+/*
+=== === ===
+Holds information about a drawable's active animation
+=== === ===
+*/
+struct AnimationState {
+    std::shared_ptr<Animation> activeAnimation;
+    int frameIdx;
+    float accumulator;
     bool isPlaying;
 
-    int currentFrameIdx;
+    AnimationState();
 
-    float animAccumulator;
-    AnimRule rules;
-public:
+    void play();
 
-    Animation(std::string anim_name,const std::vector<Frame> f,AnimRule& anim_rule);
+    void stop();
+    void stop(bool resetIdx);
 
-    const std::string& getName();
-    void createId(int anim_id);
-
-    void addFrame(Frame f);
+    void set(std::shared_ptr<Animation> anim);
+    void reset();
+    
     Rectangle getSource();
 };
