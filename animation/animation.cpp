@@ -33,13 +33,20 @@ const std::vector<Frame>& Animation::getFrames() const { return frames; }
 ANIMATION REGISTRY
 === === ===
 */
-// TODO: Add function
 void AnimationRegistry::add(int id,std::shared_ptr<Animation> anim) {
     registry[id] = std::move(anim);
 }
 
 std::shared_ptr<Animation> AnimationRegistry::get(int id) {
-    return registry.at(id);
+    auto it = registry.find(id);
+
+    // not finding an animation isn't fatal - log it and let the caller decide
+    if(it == registry.end()) {
+        std::cout << rang::fg::red << "[ERROR] - No animation with id " << id << " in registry" << rang::style::reset << std::endl;
+        return nullptr;
+    }
+
+    return it->second;
 }
 
 /*
@@ -95,10 +102,12 @@ Rectangle AnimationState::getSource() {
     // accumulate delta time
     accumulator += GetFrameTime();
 
-    // check if accumulator is greater than or equal to frame time
-    if(accumulator >= frames.at(frameIdx).time) {
-        
-        // reset accumulator
+    // drain the accumulator, advancing as many frames as the elapsed time covers.
+    // using a while (instead of if) lets the animation "catch up" after a lag spike
+    // or when a frame's time is shorter than the real frametime.
+    while(isPlaying && frames.at(frameIdx).time > 0.f && accumulator >= frames.at(frameIdx).time) {
+
+        // consume one frame's worth of time from the accumulator
         accumulator -= frames.at(frameIdx).time;
 
         // check if pingPong is true (play forward, then bounce back)

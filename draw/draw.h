@@ -1,10 +1,10 @@
 #pragma once
 #include <vector>
 #include <unordered_map>
-#include <map>
+#include <unordered_set>
 #include <string>
 #include <utility>
-#include <stdio.h>
+#include <iostream>
 #include <memory>
 
 #include "../animation/animation.h"
@@ -38,19 +38,41 @@ public:
 
     void setWidth(int width);
     void setHeight(int height);
+
+    int getPositionX() const;
+    int getPositionY() const;
+    int getLayerZ() const;
+
+    int getWidth() const;
+    int getHeight() const;
 };
 
 class Sprite : public Drawable {
 private:
-    std::unordered_map<int,std::shared_ptr<Animation>> animations;
+    AnimationRegistry* registry;          // non-owning: central DB this sprite pulls animations from
+    std::unordered_set<int> usableAnimations; // registry ids this sprite is allowed to use
     AnimationState animState;
+    std::shared_ptr<Texture2D> texture;   // sprite sheet the animations crop from
 public:
-    Sprite(const std::string& name);
-    Sprite(const std::string& name,int x,int y,int z,int width,int height);
+    Sprite(const std::string& name,AnimationRegistry* reg);
+    Sprite(const std::string& name,AnimationRegistry* reg,int x,int y,int z,int width,int height);
     ~Sprite();
 
-    void addAnimation(int localKey,std::shared_ptr<Animation> anim);
+    void setTexture(std::shared_ptr<Texture2D> tex);
 
-    void setAnimation(int localKey);
-    void setAnimation(int localKey,bool play);
+    // declare that this sprite may use the animation stored under `registryId` in the registry
+    void addAnimation(int registryId);
+
+    // make a usable animation active (pulled from the registry). returns false if it
+    // isn't in this sprite's usable list or isn't in the registry
+    bool setAnimation(int registryId);
+    void setAnimation(int registryId,bool play);
+
+    // playback controls (pass-throughs to the internal AnimationState)
+    void play();
+    void stop();
+    void stop(bool resetIdx);
+
+    // advances the active animation and draws the current frame to the screen
+    void draw();
 };
