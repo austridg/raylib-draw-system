@@ -6,6 +6,7 @@
 #include <utility>
 #include <stdio.h>
 #include <memory>
+#include "rang.hpp"
 
 #include "raylib.h"
 
@@ -20,8 +21,10 @@ struct Frame {
 struct AnimRule {
   bool isRepeating;
   bool returnToFirstFrame;
+  bool incrementAndDecrement;
 
-  AnimRule(bool repeat);
+  AnimRule();
+  AnimRule(bool repeat,bool returnFirst,bool inAndDe);
 };
 
 class Animation {
@@ -31,8 +34,8 @@ private:
 public:
     AnimRule rules;
 
-    Animation(std::string anim_name,const std::vector<Frame>& f,AnimRule& anim_rule);
-    const std::vector<Frame>& getFrames();
+    Animation(std::string anim_name,const std::vector<Frame>& f,const AnimRule& anim_rule);
+    const std::vector<Frame>& getFrames() const;
 };
 
 class AnimationRegistry {
@@ -53,6 +56,7 @@ struct AnimationState {
     int frameIdx;
     float accumulator;
     bool isPlaying;
+    bool reachedEndOfFrames;
 
     AnimationState();
 
@@ -63,6 +67,6 @@ struct AnimationState {
 
     void set(std::shared_ptr<Animation> anim);
     void reset();
-    
+
     Rectangle getSource();
 };

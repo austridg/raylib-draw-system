@@ -30,7 +30,14 @@ private:
 public:
     Drawable(const std::string& name);
     Drawable(const std::string& name,int x,int y,int z,int width,int height);
-    ~Drawable();
+    virtual ~Drawable();
+
+    void setPositionX(int x);
+    void setPositionY(int y);
+    void setLayerZ(int z);
+
+    void setWidth(int width);
+    void setHeight(int height);
 };
 
 class Sprite : public Drawable {
@@ -47,5 +54,3 @@ public:
     void setAnimation(int localKey);
     void setAnimation(int localKey,bool play);
 };
-
-// TODO: Add mutational methods for coords and width/height

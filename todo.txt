@@ -7,7 +7,7 @@ Code review findings, ordered by severity.
 [CRITICAL]
 ----------------------------------------------------------------------
 
-1. ~Drawable() is not virtual -- this WILL cause undefined behavior.
+X 1. ~Drawable() is not virtual -- this WILL cause undefined behavior.
    Drawables will be stored polymorphically (Text and Tile coming).
    When a Sprite is destroyed through a Drawable* (e.g. a
    std::vector<std::unique_ptr<Drawable>>), ~Sprite() won't run because
@@ -19,7 +19,7 @@ Code review findings, ordered by severity.
    Fix (draw.h):
        virtual ~Drawable();
 
-2. AnimRule::returnToFirstFrame is never initialized.
+X 2. AnimRule::returnToFirstFrame is never initialized.
    The constructor only sets isRepeating:
        AnimRule::AnimRule(bool repeat) : isRepeating(repeat) {}
    getSource() then reads it:
@@ -34,7 +34,7 @@ Code review findings, ordered by severity.
 [MODERATE]
 ----------------------------------------------------------------------
 
-3. Animation constructor takes AnimRule& (non-const lvalue ref).
+X 3. Animation constructor takes AnimRule& (non-const lvalue ref).
    Because it's non-const, you can't pass a temporary:
        Animation a("run", frames, AnimRule(true));  // won't compile
    You're forced to make a named AnimRule first.
@@ -44,14 +44,14 @@ Code review findings, ordered by severity.
                  const std::vector<Frame>& f,
                  const AnimRule& anim_rule);
 
-4. getFrames() should be const.
+X 4. getFrames() should be const.
    It doesn't modify the Animation, and Animation is read-only data
    shared across drawables. const documents and enforces that.
 
    Fix (animation.h):
        const std::vector<Frame>& getFrames() const;
 
-5. getSource() has no null guard.
+X 5. getSource() has no null guard.
    If a Sprite calls getSource() before any setAnimation(),
    activeAnimation is nullptr and activeAnimation->getFrames()
    dereferences null -> crash.
@@ -63,18 +63,18 @@ Code review findings, ordered by severity.
 [MINOR]
 ----------------------------------------------------------------------
 
-6. registry.add is still a TODO in animation.cpp -- declared in the
+X 6. registry.add is still a TODO in animation.cpp -- declared in the
    header but unimplemented, so it won't link if called.
    Trivial:
        registry[id] = std::move(anim);
 
-7. reset() only nulls activeAnimation but leaves isPlaying / frameIdx /
+X 7. reset() only nulls activeAnimation but leaves isPlaying / frameIdx /
    accumulator as-is. If isPlaying is left true after a reset, the next
    getSource() hits the null-deref from #5. Consider resetting all four
    fields.
 
-8. printf debug strings lack '\n' so they smear together in the
-   console. Fine for now, just noting.
+X 8. printf debug strings lack '\n' so they smear together in the
+   console. Fine for now, just noting.0
 
 9. getSource() advances at most one frame per call. If a frame's time
    is shorter than the real frametime (lag spike, or a very fast

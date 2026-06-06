@@ -13,6 +13,12 @@ Drawable::Drawable(const std::string& name,int x,int y,int z,int width,int heigh
 
 Drawable::~Drawable() {}
 
+void Drawable::setPositionX(int x) { positionX = x; }
+void Drawable::setPositionY(int y) { positionY = y; }
+void Drawable::setLayerZ(int z) { layerZ = z; }
+void Drawable::setWidth(int width) { drawableWidth = width; }
+void Drawable::setHeight(int height) { drawableHeight = height; }
+
 /*
 === === ===
 SPRITE
@@ -32,14 +38,20 @@ void Sprite::addAnimation(int localKey,std::shared_ptr<Animation> anim) {
 
 void Sprite::setAnimation(int localKey) {
     auto it = animations.find(localKey);
-    if(it == animations.end()) { printf("No valid animation found."); return; }
+    if(it == animations.end()) { 
+        std::cout << rang::fg::red << "[ERROR] - No valid animation found" << rang::style::reset << std::endl; 
+        return; 
+    }
 
     animState.set(it->second);
 }
 
 void Sprite::setAnimation(int localKey,bool play) {
     auto it = animations.find(localKey);
-    if(it == animations.end()) { printf("No valid animation found."); return; }
+    if(it == animations.end()) {
+        std::cout << rang::fg::red << "[ERROR] - No valid animation found" << rang::style::reset << std::endl;
+        return; 
+    }
 
     animState.set(it->second);
     if(play) { animState.play(); }
