@@ -89,3 +89,63 @@ X 8. printf debug strings lack '\n' so they smear together in the
 - Add Text drawable.
 - Add Tile drawable.
 - Add mutational methods for coords and width/height (Drawable).
+
+----------------------------------------------------------------------
+[LIBRARY / DISTRIBUTION READINESS]
+----------------------------------------------------------------------
+Goal: make this a real "download, include, and use" library, not something
+that only builds on my machine. Right now a stranger who clones this can only
+use it by vendoring (copying the animation/ draw/ assets/ folders into their
+own project and compiling the .cpp files alongside their code). The design is
+library-shaped; what's missing is the distribution/packaging layer.
+
+[CRITICAL]
+
+1. Hidden hard dependency on rang.hpp.
+   animation/animation.h does #include "rang.hpp", but rang.hpp is NOT in the
+   repo -- it only exists locally at /usr/local/include/rang.hpp. Anyone who
+   clones this won't compile at all until they separately install rang. Worse,
+   it's pulled in through a PUBLIC header, so it leaks onto every consumer.
+   Options:
+     - vendor rang.hpp into the repo (e.g. third_party/), OR
+     - document it as a hard prerequisite, OR
+     - (cleanest) stop logging from library headers entirely -- see item 4,
+       which removes the rang dependency altogether.
+
+2. No namespace -- name collisions waiting to happen.
+   Everything is global: Frame, Animation, Sprite, Drawable, AnimRule,
+   TextureRegistry, FontRegistry, AnimationRegistry, AnimationState. These are
+   extremely common names; the moment a consumer's project (or another lib)
+   also defines a Sprite or Frame, it won't compile.
+   Fix: wrap all public types in a namespace, e.g. namespace anim { ... }.
+
+[MODERATE]
+
+3. No packaging / single include path.
+   A consumer currently has to include three separate headers and manually add
+   three .cpp files to their build. Easy wins:
+     - umbrella header (e.g. anim/anim.h or animation.hpp) that includes all
+       three module headers, so users include one thing.
+     - a build target that produces a static lib (libanimation.a) plus an
+       install rule -- OR a CMakeLists.txt so people can use add_subdirectory /
+       FetchContent. CMake is what gives the real "download and use" experience
+       and is already flagged as the migration target in the Makefile.
+
+4. Library prints to std::cout itself.
+   get(), getSource(), setAnimation(), etc. write errors/warnings straight to
+   stdout via rang. A library spamming a consumer's console is a no-no, and
+   it's the ONLY reason rang is a dependency at all. Replace with returned
+   error codes / a caller-settable log callback, or compile logging out by
+   default. Doing this also resolves item 1.
+
+[MINOR]
+
+5. Example won't run out-of-the-box after a clone.
+   .gitignore ignores *.png and *.txt, so test_anim.png (the example's sprite
+   sheet) isn't committed. A fresh clone gets the code but not the asset the
+   demo needs. Not a library blocker, but the demo won't run for others.
+   Consider committing the sample asset (force-add, or carve an assets/
+   exception in .gitignore).
+
+Suggested order: 2 (namespace) -> 4 (logging, which kills the rang dep) ->
+3 (CMake + umbrella header). 1 and 5 fall out along the way.
