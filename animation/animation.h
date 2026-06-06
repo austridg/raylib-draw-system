@@ -21,10 +21,10 @@ struct Frame {
 struct AnimRule {
   bool isRepeating;
   bool returnToFirstFrame;
-  bool incrementAndDecrement;
+  bool pingPong;
 
   AnimRule();
-  AnimRule(bool repeat,bool returnFirst,bool inAndDe);
+  AnimRule(bool repeat,bool returnFirst,bool pp);
 };
 
 class Animation {
@@ -56,7 +56,7 @@ struct AnimationState {
     int frameIdx;
     float accumulator;
     bool isPlaying;
-    bool reachedEndOfFrames;
+    int step; // direction of animation
 
     AnimationState();
 
