@@ -6,7 +6,7 @@
 *.obj
 *.exe
 *.out
-anim_example
+rad2d_example
 build/
 bin/
 
@@ -18,3 +18,4 @@ bin/
 .DS_Store
 
 *.txt
+!CMakeLists.txt

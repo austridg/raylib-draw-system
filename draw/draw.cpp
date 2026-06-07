@@ -1,5 +1,7 @@
 #include "draw.h"
 
+namespace rad2d {
+
 /*
 === === ===
 DRAWABLE
@@ -51,13 +53,13 @@ void Sprite::addAnimation(int registryId) {
 bool Sprite::setAnimation(int registryId) {
     // the sprite must have declared this animation as usable
     if(usableAnimations.find(registryId) == usableAnimations.end()) {
-        std::cout << rang::fg::red << "[ERROR] - Animation id " << registryId << " not in sprite's usable list" << rang::style::reset << std::endl;
+        std::cerr << "[ERROR] - Animation id " << registryId << " not in sprite's usable list" << std::endl;
         return false;
     }
 
     // need a registry to pull the actual animation from
     if(!registry) {
-        std::cout << rang::fg::red << "[ERROR] - Sprite can't access the animation registry" << rang::style::reset << std::endl;
+        std::cerr << "[ERROR] - Sprite can't access the animation registry" << std::endl;
         return false;
     }
 
@@ -81,7 +83,7 @@ void Sprite::stop(bool resetIdx) { animState.stop(resetIdx); }
 void Sprite::draw() {
     // no texture means there's nothing to crop a frame out of
     if(!texture) {
-        std::cout << rang::fg::red << "[ERROR] - No texture set on sprite" << rang::style::reset << std::endl;
+        std::cerr << "[ERROR] - No texture set on sprite" << std::endl;
         return;
     }
 
@@ -99,3 +101,5 @@ void Sprite::draw() {
 
     DrawTexturePro(*texture, source, dest, {0,0}, 0.0f, WHITE);
 }
+
+} // namespace rad2d

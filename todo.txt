@@ -101,7 +101,9 @@ library-shaped; what's missing is the distribution/packaging layer.
 
 [CRITICAL]
 
-1. Hidden hard dependency on rang.hpp.
+X 1. Hidden hard dependency on rang.hpp.  [DONE 2026-06-06]
+   Removed the rang include and all rang color codes; logs now use plain
+   std::cerr. No external header dependency remains.
    animation/animation.h does #include "rang.hpp", but rang.hpp is NOT in the
    repo -- it only exists locally at /usr/local/include/rang.hpp. Anyone who
    clones this won't compile at all until they separately install rang. Worse,
@@ -112,7 +114,8 @@ library-shaped; what's missing is the distribution/packaging layer.
      - (cleanest) stop logging from library headers entirely -- see item 4,
        which removes the rang dependency altogether.
 
-2. No namespace -- name collisions waiting to happen.
+X 2. No namespace -- name collisions waiting to happen.  [DONE 2026-06-06]
+   All public types now wrapped in `namespace rad2d { ... }`.
    Everything is global: Frame, Animation, Sprite, Drawable, AnimRule,
    TextureRegistry, FontRegistry, AnimationRegistry, AnimationState. These are
    extremely common names; the moment a consumer's project (or another lib)
@@ -121,7 +124,10 @@ library-shaped; what's missing is the distribution/packaging layer.
 
 [MODERATE]
 
-3. No packaging / single include path.
+X 3. No packaging / single include path.  [DONE 2026-06-06]
+   Added umbrella header rad2d.hpp and a CMakeLists.txt that builds
+   librad2d.a, exposes the rad2d::rad2d target, and supports add_subdirectory
+   / FetchContent. (find_package still needs a Config file -- see RELEASE item 2.)
    A consumer currently has to include three separate headers and manually add
    three .cpp files to their build. Easy wins:
      - umbrella header (e.g. anim/anim.h or animation.hpp) that includes all
@@ -131,7 +137,11 @@ library-shaped; what's missing is the distribution/packaging layer.
        FetchContent. CMake is what gives the real "download and use" experience
        and is already flagged as the migration target in the Makefile.
 
-4. Library prints to std::cout itself.
+~ 4. Library prints to std::cout itself.  [PARTIAL 2026-06-06]
+   Moved off std::cout/rang to std::cerr, which removed the rang dep. But the
+   library still writes to the console unconditionally -- the real fix (return
+   codes / caller-settable log callback / compile logging out by default) is
+   still TODO.
    get(), getSource(), setAnimation(), etc. write errors/warnings straight to
    stdout via rang. A library spamming a consumer's console is a no-no, and
    it's the ONLY reason rang is a dependency at all. Replace with returned
@@ -149,3 +159,51 @@ library-shaped; what's missing is the distribution/packaging layer.
 
 Suggested order: 2 (namespace) -> 4 (logging, which kills the rang dep) ->
 3 (CMake + umbrella header). 1 and 5 fall out along the way.
+
+----------------------------------------------------------------------
+[BETA 0.1 RELEASE READINESS]  (assessment 2026-06-06)
+----------------------------------------------------------------------
+Verdict: close, but not quite. Library compiles clean (no warnings), both
+build systems (Make + CMake) work, API is coherent and the animation engine
+(timing accumulator, ping-pong, repeat) is solid. The gaps below are
+packaging/release hygiene, not core logic.
+
+[BLOCKERS] -- fix before tagging 0.1
+
+1. No LICENSE file.
+   Without one, a public release is legally unusable by anyone who clones it.
+   Suggested: Zlib (matches raylib's license) unless we prefer MIT.
+
+2. find_package(rad2d) does not actually work.
+   install(EXPORT ...) only writes rad2dTargets.cmake; find_package needs a
+   rad2dConfig.cmake (plus a version file via write_basic_package_version_file,
+   and find_dependency(raylib) so the transitive raylib link resolves).
+   add_subdirectory / FetchContent DO work today. Fix: generate the Config file
+   with configure_package_config_file, OR soften the README claim.
+   NOTE: README currently overstates this -- it says install provides a
+   find_package(rad2d) config. Keep README and CMake in sync.
+
+3. Demo asset isn't shipped.
+   test_anim.png is caught by the blanket *.png ignore (same trap that hid
+   CMakeLists.txt). Fresh clone can `make` but `make run` shows nothing, even
+   though the README says to run it. Fix: add `!test_anim.png` exception in
+   .gitignore (this is the same issue as DISTRIBUTION item 5 above).
+
+[SHOULD-FIX] -- cheap robustness / library etiquette
+
+4. TextureRegistry::get / FontRegistry::get use .at(id)  (assets.cpp:6,17).
+   Throws std::out_of_range on an unknown id -- a missing asset crashes the
+   consumer. Everywhere else the library logs + returns a sentinel
+   (nullptr / zero-rect). Make these log-and-return-null like
+   AnimationRegistry::get for consistency.
+
+[OPTIONAL] -- not blocking 0.1
+
+5. AnimationState::getSource() indexes frames.at(frameIdx) (animation.cpp:
+   102,110,...). An Animation built with an empty frame vector throws.
+   A one-line guard would make it safe.
+
+6. Unused includes: assets.h pulls in <map> and <stdio.h> but doesn't use them.
+
+7. No CHANGELOG.md and no version macro in a public header (e.g.
+   RAD2D_VERSION_MAJOR/MINOR). Nice-to-have for tracking releases.

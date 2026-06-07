@@ -5,9 +5,10 @@
 #include <utility>
 #include <iostream>
 #include <memory>
-#include "rang.hpp"
 
 #include "raylib.h"
+
+namespace rad2d {
 
 struct Frame {
     float time; // 1 = one second
@@ -69,3 +70,5 @@ struct AnimationState {
 
     Rectangle getSource();
 };
+
+} // namespace rad2d

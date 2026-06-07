@@ -11,6 +11,8 @@
 
 #include "raylib.h"
 
+namespace rad2d {
+
 /*
 === Drawable ===
 Drawables hold all information for drawing
@@ -76,3 +78,5 @@ public:
     // advances the active animation and draws the current frame to the screen
     void draw();
 };
+
+} // namespace rad2d

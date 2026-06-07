@@ -1,25 +1,25 @@
-# Build for the animation library example.
+# Build for the RAD-2D library example.
 #
 # Targets:
 #   make        build the example (default)
 #   make run    build (if needed) and launch it
 #   make clean  remove build artifacts
 #
-# Note: this is a simple single-platform (Linux) Makefile. If the library
-# ever needs to build on Windows/macOS or be consumed by others as a package,
-# migrate to CMake at that point.
+# Note: this is a simple single-platform (Linux) Makefile for building the
+# example. To consume the library as a package (add_subdirectory / FetchContent /
+# install), use the CMakeLists.txt instead.
 
 CXX      := g++
 CXXFLAGS := -std=c++17 -Wall -Wextra
 
-# -I/usr/local/include is where rang.hpp lives; raylib flags come from pkg-config
-INCLUDES := -I/usr/local/include -Ianimation -Idraw -Iassets
+# -I. lets sources find the umbrella header (rad2d.hpp); raylib flags come from pkg-config
+INCLUDES := -I. -Ianimation -Idraw -Iassets
 LIBS     := $(shell pkg-config --libs raylib)
 
-TARGET   := anim_example
+TARGET   := rad2d_example
 SOURCES  := main.cpp animation/animation.cpp draw/draw.cpp assets/assets.cpp
 OBJECTS  := $(SOURCES:.cpp=.o)
-HEADERS  := animation/animation.h draw/draw.h assets/assets.h
+HEADERS  := rad2d.hpp animation/animation.h draw/draw.h assets/assets.h
 
 .PHONY: all run clean
 

@@ -1,5 +1,7 @@
 #include "animation.h"
 
+namespace rad2d {
+
 /*
 === === ===
 FRAME
@@ -42,7 +44,7 @@ std::shared_ptr<Animation> AnimationRegistry::get(int id) {
 
     // not finding an animation isn't fatal - log it and let the caller decide
     if(it == registry.end()) {
-        std::cout << rang::fg::red << "[ERROR] - No animation with id " << id << " in registry" << rang::style::reset << std::endl;
+        std::cerr << "[ERROR] - No animation with id " << id << " in registry" << std::endl;
         return nullptr;
     }
 
@@ -69,10 +71,10 @@ void AnimationState::stop(bool resetIdx) {
     isPlaying = false;
 }
 
-void AnimationState::set(std::shared_ptr<Animation> anim) { 
+void AnimationState::set(std::shared_ptr<Animation> anim) {
     if(anim == activeAnimation) {
-        std::cout << rang::fg::yellow << "[WARNING] - Animation is already active animation" << rang::style::reset << std::endl;
-        return; 
+        std::cerr << "[WARNING] - Animation is already active animation" << std::endl;
+        return;
     }
     activeAnimation = std::move(anim);
     frameIdx = 0;
@@ -90,7 +92,7 @@ void AnimationState::reset() {
 
 Rectangle AnimationState::getSource() {
     if(!activeAnimation) { 
-        std::cout << rang::fg::red << "[ERROR] - No animation set" << rang::style::reset << std::endl; 
+        std::cerr << "[ERROR] - No animation set" << std::endl;
         return Rectangle{0,0,0,0};
     }
 
@@ -170,3 +172,5 @@ Rectangle AnimationState::getSource() {
     // return current frame
     return frames.at(frameIdx).source;
 }
+
+} // namespace rad2d

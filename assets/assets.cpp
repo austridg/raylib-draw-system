@@ -1,5 +1,7 @@
 #include "assets.h"
 
+namespace rad2d {
+
 std::shared_ptr<Texture2D> TextureRegistry::get(int id) {
     return registry.at(id);
 }
@@ -21,3 +23,5 @@ void FontRegistry::load(int id,const std::string& fontPath) {
         [](Font* f){ UnloadFont(*f); delete f; }
     ));
 }
+
+} // namespace rad2d

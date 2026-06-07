@@ -9,6 +9,8 @@
 
 #include "raylib.h"
 
+namespace rad2d {
+
 class TextureRegistry {
 private:
     std::unordered_map<int,std::shared_ptr<Texture2D>> registry;
@@ -24,3 +26,5 @@ public:
     std::shared_ptr<Font> get(int id);
     void load(int id, const std::string& fontPath);
 };
+
+} // namespace rad2d

@@ -1,11 +1,11 @@
-# Animation
+# RAD-2D
 
 > ⚠️ **Beta.** The core animation + sprite pipeline works; `Text` and `Tile`
 > drawables and other functionality are still on the way. See
 > [Status & roadmap](#status--roadmap).
 
-A **2D drawing and animation wrapper** for
-[raylib](https://www.raylib.com/), written in C++17.
+**RAD-2D** (Raylib Animation & Drawing, 2D) is a **2D drawing and animation
+wrapper** for [raylib](https://www.raylib.com/), written in C++17.
 
 The point of this library is to make drawing — and especially animation — more
 abstract, so you're not manually juggling source rectangles and frame timing
@@ -32,11 +32,14 @@ hide raylib from you.
 
 ## Quick start
 
+All public types live in the `rad2d` namespace, and a single umbrella header
+(`rad2d.hpp`) pulls in the whole library.
+
 ```cpp
 #include "raylib.h"
-#include "assets/assets.h"
-#include "draw/draw.h"
-#include "animation/animation.h"
+#include "rad2d.hpp"
+
+using namespace rad2d;
 
 enum TextureKey { SHEET };
 enum AnimId     { IDLE };
@@ -86,6 +89,9 @@ This is essentially `main.cpp`, the bundled example. Build and run it with
 ---
 
 ## Concepts
+
+> All types below live in the `rad2d` namespace. The snippets assume a
+> `using namespace rad2d;` (or prefix the types with `rad2d::`).
 
 ### Assets — `assets/assets.h`
 
@@ -185,41 +191,60 @@ catches up after a lag spike) regardless of render frame rate.
 
 ## Building
 
-Requires a C++17 compiler, [raylib](https://www.raylib.com/) (found via
-`pkg-config`), and [`rang.hpp`](https://github.com/agauniyal/rang) for coloured
-log output (expected at `/usr/local/include`).
+Requires a C++17 compiler and [raylib](https://www.raylib.com/) (found via
+its CMake config or `pkg-config`). There are no other dependencies.
+
+### CMake (recommended)
 
 ```bash
-make        # build the example -> ./anim_example
+cmake -S . -B build
+cmake --build build      # produces librad2d.a + the ./build/rad2d_example demo
+```
+
+To consume the library from your own CMake project, vendor it (or use
+`FetchContent`) and link the exported target:
+
+```cmake
+add_subdirectory(rad2d)              # or FetchContent_Declare(...)
+target_link_libraries(your_app PRIVATE rad2d::rad2d)
+```
+
+`rad2d::rad2d` carries its include path with it, so `#include "rad2d.hpp"`
+just works. `cmake --install build` also installs the library, headers, and a
+`find_package(rad2d)` config.
+
+### Make
+
+The Makefile builds the bundled example on Linux:
+
+```bash
+make        # build the example -> ./rad2d_example
 make run    # build (if needed) and run it
 make clean  # remove build artifacts
 ```
 
-To use the library in your own project, add the module directories to your
-include path and compile the `.cpp` files alongside your code:
+To use the library without CMake, add the repo root to your include path and
+compile the `.cpp` files alongside your code:
 
 ```bash
 g++ -std=c++17 your_app.cpp \
     animation/animation.cpp draw/draw.cpp assets/assets.cpp \
-    -Ianimation -Idraw -Iassets -I/usr/local/include \
-    $(pkg-config --libs raylib) -o your_app
+    -I. $(pkg-config --libs raylib) -o your_app
 ```
-
-> The Makefile is intentionally a simple single-platform (Linux) build. If the
-> library grows to target Windows/macOS or ship as a package, the plan is to
-> migrate to CMake.
 
 ---
 
 ## Project layout
 
 ```
-animation/     Frame, AnimRule, Animation, AnimationRegistry, AnimationState
-assets/        TextureRegistry, FontRegistry
-draw/          Drawable base class + Sprite
-main.cpp       Example / demo program
-test_anim.png  Sample 64x64-frame sprite sheet used by the example
-Makefile       Build the example
+rad2d.hpp       Umbrella header — include this to get everything
+animation/      Frame, AnimRule, Animation, AnimationRegistry, AnimationState
+assets/         TextureRegistry, FontRegistry
+draw/           Drawable base class + Sprite
+main.cpp        Example / demo program
+test_anim.png   Sample 64x64-frame sprite sheet used by the example
+CMakeLists.txt  Library + example build (packaging / install)
+Makefile        Simple Linux build of the example
 ```
 
 ---
