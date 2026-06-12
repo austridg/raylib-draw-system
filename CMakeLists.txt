@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(rad2d VERSION 0.1.0 LANGUAGES CXX)
+project(rad2d VERSION 0.2.0 LANGUAGES CXX)
 
 # ---------------------------------------------------------------------------
 # RAD-2D: a small raylib-based drawing/animation wrapper for 2D games.
@@ -33,6 +33,7 @@ add_library(rad2d
     animation/animation.cpp
     draw/draw.cpp
     assets/assets.cpp
+    tiles/tiles.cpp
 )
 add_library(rad2d::rad2d ALIAS rad2d)
 
@@ -67,10 +68,34 @@ install(FILES rad2d.hpp DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(FILES animation/animation.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/animation)
 install(FILES draw/draw.h            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/draw)
 install(FILES assets/assets.h        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/assets)
+install(FILES tiles/tiles.h          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/tiles)
 
 # Export targets so downstream projects can find_package(rad2d).
 install(EXPORT rad2dTargets
     FILE rad2dTargets.cmake
     NAMESPACE rad2d::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/rad2d
+)
+
+# --- package config --------------------------------------------------------
+# install(EXPORT ...) only writes rad2dTargets.cmake; find_package(rad2d) also
+# needs a Config file (which re-resolves raylib) and a version file.
+include(CMakePackageConfigHelpers)
+
+configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/rad2dConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/rad2dConfig.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/rad2d
+)
+
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/rad2dConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/rad2dConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/rad2dConfigVersion.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/rad2d
 )

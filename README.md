@@ -1,7 +1,7 @@
 # RAD-2D
 
-> ⚠️ **Beta.** The core animation + sprite pipeline works; `Text` and `Tile`
-> drawables and other functionality are still on the way. See
+> ⚠️ **Beta.** The full drawable set — `Sprite`, `Background`, `Text`, `UI`, and
+> `Tilemap` — is in place and building. APIs may still shift before 1.0. See
 > [Status & roadmap](#status--roadmap).
 
 **RAD-2D** (Raylib Animation & Drawing, 2D) is a **2D drawing and animation
@@ -19,10 +19,11 @@ It's built around three ideas:
 - **A central animation registry** — one place to define every animation in
   your game. Define a `"walk"` cycle once and any number of sprites can share
   it, which is ideal when characters reuse a consistent sprite-sheet layout.
-- **Drawables** — objects that represent anything you put on screen (sprites
-  today; text and tiles planned). A drawable pulls from the animation registry,
-  keeps a curated "usable" list of the animations it's allowed to play, and
-  renders the current frame in a single `draw()` call.
+- **Drawables** — objects that represent anything you put on screen: sprites,
+  scrolling backgrounds, text, HUD/UI elements, and tile layers. They share a
+  common `Drawable` base (so you can store them polymorphically and call
+  `draw()` on each), and the animated ones pull from the shared animation
+  registry and render the current frame in a single `draw()` call.
 
 You still call raylib directly for the window and frame loop (`InitWindow`,
 `BeginDrawing`, …) — this library sits on top to remove the bookkeeping, not to
@@ -187,6 +188,84 @@ Timing is handled by an internal `AnimationState` that accumulates raylib's
 frame delta and drains it frame-by-frame, so playback stays correct (and
 catches up after a lag spike) regardless of render frame rate.
 
+`Sprite`, `UI`, and `Background` all share an `AnimatedDrawable` base that holds
+the registry pointer, the usable-animation set, and the `AnimationState` — so the
+animation plumbing (`addAnimation` / `setAnimation` / `play` / `stop`) lives in
+one place.
+
+### Backgrounds — `draw/draw.h`
+
+`Background` fills an area with a texture in one of two modes:
+
+- **Scroll** — a single tileable texture slid via `TEXTURE_WRAP_REPEAT` for a
+  seamless infinite loop. Great for parallax: stack several at different
+  `setScrollSpeed`s and z-layers.
+- **Animated** — when an animation from the registry is active, its current
+  frame is drawn across the area instead.
+
+```cpp
+Background stars("stars", nullptr, 0, 0, 0, 1080, 720); // nullptr = scroll only
+stars.setTexture(textures.get(STARS));
+stars.setScrollSpeed(20.0f, 0.0f);                      // drift right at 20 px/s
+```
+
+(The two modes don't combine: GPU wrap tiles the whole texture, not one frame of
+a sheet.)
+
+### Text — `draw/draw.h`
+
+`Text` renders a string glyph-by-glyph, which enables a **typewriter** reveal and
+per-glyph **effects** (shake, wave, fade). It's the rendering half of a text
+system — a markup/dialogue layer can sit on top and drive it.
+
+```cpp
+Text line("dialogue", 40, 40, 0);
+line.setFont(fonts.get(MAIN));         // omit for raylib's default font
+line.setText("* You feel determined.");
+line.enableTypewriter(20.0f);          // 20 chars/sec
+line.setEffect(TextEffect::WAVE);
+line.setOnReveal([&](int i, int cp){ /* play a blip sound */ });
+// line.revealAll();  line.isFinished();
+```
+
+### UI — `draw/draw.h`
+
+`UI` is a composite HUD element: an (optionally animated) **background** texture,
+an optional **icon**, and an optional **`Text`**. Any piece may be left unset; the
+icon is positioned relative to the element, and the background animates via the
+shared registry.
+
+```cpp
+UI box("textbox", &anims, 40, 380, 10, 480, 96);
+box.setBackground(textures.get(TEXTBOX));
+box.setIcon(textures.get(PORTRAIT));
+box.setIconOffset(8, 8);
+box.setText(&line);
+box.draw();   // background -> icon -> text
+```
+
+### Tiles — `tiles/tiles.h`
+
+A `TileSet` maps **tile ids** (what your map data stores) to definitions — static
+or animated (animated tiles pull from the shared registry). A `Tilemap` is a
+single z-layer holding a flat, row-major grid of ids (`0` = empty); stack several
+for multi-layer maps. The map *format* (JSON/CSV/…) lives in your game; you feed
+the parsed ids in.
+
+```cpp
+TileSet tiles(&anims);
+tiles.defineTile(1, textures.get(SHEET), { 0, 0, 16, 16 });   // static
+tiles.defineAnimatedTile(2, textures.get(SHEET), WATER_ANIM); // animated
+
+Tilemap ground("ground", &tiles, 0, 0, 0, /*tileSize*/16);
+ground.setTiles({ 1,1,2,0,
+                  1,2,2,1 }, /*cols*/4, /*rows*/2);
+
+// in the loop:
+tiles.update();   // once per frame: advances animated tiles in sync
+ground.draw();
+```
+
 ---
 
 ## Building
@@ -240,9 +319,9 @@ g++ -std=c++17 your_app.cpp \
 rad2d.hpp       Umbrella header — include this to get everything
 animation/      Frame, AnimRule, Animation, AnimationRegistry, AnimationState
 assets/         TextureRegistry, FontRegistry
-draw/           Drawable base class + Sprite
+draw/           Drawable + AnimatedDrawable, Sprite, Background, Text, UI
+tiles/          Tile, TileSet, Tilemap
 main.cpp        Example / demo program
-test_anim.png   Sample 64x64-frame sprite sheet used by the example
 CMakeLists.txt  Library + example build (packaging / install)
 Makefile        Simple Linux build of the example
 ```
@@ -251,12 +330,15 @@ Makefile        Simple Linux build of the example
 
 ## Status & roadmap
 
-**Beta.** The core animation and sprite pipeline is working. Still to come:
+**Beta.** All five drawable types are implemented and building — `Sprite`,
+`Background`, `Text`, `UI`, and `Tilemap`. Still to come:
 
-- **`Text` drawable** — render strings via the `FontRegistry`.
-- **`Tile` drawable** — tile-map / grid rendering.
-- Additional drawing/animation functionality and conveniences.
+- A **markup / dialogue layer** on top of `Text` (control codes for pauses and
+  color, voice blips, box advancement) — `Text` already exposes the hooks for it.
+- **Non-square / combined** tile and background modes (e.g. a scrolling *and*
+  animated background via manual tiling).
+- Additional drawing/animation conveniences, and API polish toward 1.0.
 
-`Drawable` is designed to be stored polymorphically (e.g.
-`std::vector<std::unique_ptr<Drawable>>`) so future drawable types slot into the
-same render path as `Sprite`.
+`Drawable` is stored polymorphically (e.g.
+`std::vector<std::unique_ptr<Drawable>>`) so every drawable type — current and
+future — shares the same render path.

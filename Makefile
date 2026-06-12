@@ -13,13 +13,13 @@ CXX      := g++
 CXXFLAGS := -std=c++17 -Wall -Wextra
 
 # -I. lets sources find the umbrella header (rad2d.hpp); raylib flags come from pkg-config
-INCLUDES := -I. -Ianimation -Idraw -Iassets
+INCLUDES := -I. -Ianimation -Idraw -Iassets -Itiles
 LIBS     := $(shell pkg-config --libs raylib)
 
 TARGET   := rad2d_example
-SOURCES  := main.cpp animation/animation.cpp draw/draw.cpp assets/assets.cpp
+SOURCES  := main.cpp animation/animation.cpp draw/draw.cpp assets/assets.cpp tiles/tiles.cpp
 OBJECTS  := $(SOURCES:.cpp=.o)
-HEADERS  := rad2d.hpp animation/animation.h draw/draw.h assets/assets.h
+HEADERS  := rad2d.hpp animation/animation.h draw/draw.h assets/assets.h tiles/tiles.h
 
 .PHONY: all run clean
 

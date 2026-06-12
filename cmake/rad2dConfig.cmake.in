@@ -1,0 +1,8 @@
+@PACKAGE_INIT@
+
+# rad2d links raylib through its PUBLIC interface, so consumers that
+# find_package(rad2d) need raylib resolved too.
+include(CMakeFindDependencyMacro)
+find_dependency(raylib)
+
+include("${CMAKE_CURRENT_LIST_DIR}/rad2dTargets.cmake")

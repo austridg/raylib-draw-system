@@ -98,6 +98,12 @@ Rectangle AnimationState::getSource() {
 
     const std::vector<Frame>& frames = activeAnimation->getFrames();
 
+    // an animation with no frames has nothing to index into - guard before frames.at()
+    if(frames.empty()) {
+        std::cerr << "[ERROR] - Active animation has no frames" << std::endl;
+        return Rectangle{0,0,0,0};
+    }
+
     // if animation is not playing then just return current frame with no incrementation
     if(!isPlaying) { return frames.at(frameIdx).source; }
 

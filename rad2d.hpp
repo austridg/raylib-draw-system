@@ -6,6 +6,11 @@
 //
 // Everything lives in the `rad2d` namespace.
 
+#define RAD2D_VERSION_MAJOR 0
+#define RAD2D_VERSION_MINOR 2
+#define RAD2D_VERSION_PATCH 0
+
 #include "animation/animation.h"
 #include "draw/draw.h"
 #include "assets/assets.h"
+#include "tiles/tiles.h"
