@@ -1,12 +1,14 @@
 #pragma once
 #include <vector>
 #include <unordered_map>
-#include <map>
 #include <string>
 #include <utility>
-#include <stdio.h>
+#include <iostream>
+#include <memory>
 
 #include "raylib.h"
+
+namespace rad2d {
 
 struct Frame {
     float time; // 1 = one second
@@ -19,40 +21,54 @@ struct Frame {
 struct AnimRule {
   bool isRepeating;
   bool returnToFirstFrame;
+  bool pingPong;
 
-  AnimRule(bool repeat);
-};
-
-class Animation; // forward declaration because they're cool
-
-// holds all animations
-struct Animations {
-    int total;
-    std::unordered_map<std::string,Animation*> index;
-
-    void addAnimation(Animation& animation);
-    Animation* getAnimation(const std::string& anim_name);
+  AnimRule();
+  AnimRule(bool repeat,bool returnFirst,bool pp);
 };
 
 class Animation {
 private:
     std::string name;
-    int id;
-    const std::string& texturePath;
     std::vector<Frame> frames;
-    bool isPlaying;
-
-    int currentFrameIdx;
-
-    float animAccumulator;
-    AnimRule rules;
 public:
+    AnimRule rules;
 
-    Animation(std::string anim_name,const std::vector<Frame> f,const std::string& texture_path,AnimRule& anim_rule);
+    Animation(std::string anim_name,const std::vector<Frame>& f,const AnimRule& anim_rule);
+    const std::vector<Frame>& getFrames() const;
+};
 
-    const std::string& getName();
-    void createId(int anim_id);
+class AnimationRegistry {
+private:
+    std::unordered_map<int,std::shared_ptr<Animation>> registry;
+public:
+    void add(int id,std::shared_ptr<Animation> anim);
+    std::shared_ptr<Animation> get(int id);
+};
 
-    void addFrame(Frame f);
+/*
+=== === ===
+Holds information about a drawable's active animation
+=== === ===
+*/
+struct AnimationState {
+    std::shared_ptr<Animation> activeAnimation;
+    int frameIdx;
+    float accumulator;
+    bool isPlaying;
+    int step; // direction of animation
+
+    AnimationState();
+
+    void play();
+
+    void stop();
+    void stop(bool resetIdx);
+
+    void set(std::shared_ptr<Animation> anim);
+    void reset();
+
     Rectangle getSource();
 };
+
+} // namespace rad2d

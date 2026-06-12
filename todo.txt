@@ -1,0 +1,209 @@
+TODO - 2026-06-04
+=================
+
+Code review findings, ordered by severity.
+
+----------------------------------------------------------------------
+[CRITICAL]
+----------------------------------------------------------------------
+
+X 1. ~Drawable() is not virtual -- this WILL cause undefined behavior.
+   Drawables will be stored polymorphically (Text and Tile coming).
+   When a Sprite is destroyed through a Drawable* (e.g. a
+   std::vector<std::unique_ptr<Drawable>>), ~Sprite() won't run because
+   the base destructor isn't virtual. The shared_ptrs in the animations
+   map clean up via their own destructor, but it's still UB and will
+   leak/crash once a derived class holds anything non-trivial (e.g. a
+   raylib Texture2D).
+
+   Fix (draw.h):
+       virtual ~Drawable();
+
+X 2. AnimRule::returnToFirstFrame is never initialized.
+   The constructor only sets isRepeating:
+       AnimRule::AnimRule(bool repeat) : isRepeating(repeat) {}
+   getSource() then reads it:
+       if(activeAnimation->rules.returnToFirstFrame) { frameIdx = 0; }
+   This reads uninitialized memory -> undefined behavior; the branch is
+   decided by stack/heap junk.
+
+   Fix (animation.h): give it a default or take it as a ctor param:
+       bool returnToFirstFrame = false;
+
+----------------------------------------------------------------------
+[MODERATE]
+----------------------------------------------------------------------
+
+X 3. Animation constructor takes AnimRule& (non-const lvalue ref).
+   Because it's non-const, you can't pass a temporary:
+       Animation a("run", frames, AnimRule(true));  // won't compile
+   You're forced to make a named AnimRule first.
+
+   Fix (animation.h): make it const:
+       Animation(std::string anim_name,
+                 const std::vector<Frame>& f,
+                 const AnimRule& anim_rule);
+
+X 4. getFrames() should be const.
+   It doesn't modify the Animation, and Animation is read-only data
+   shared across drawables. const documents and enforces that.
+
+   Fix (animation.h):
+       const std::vector<Frame>& getFrames() const;
+
+X 5. getSource() has no null guard.
+   If a Sprite calls getSource() before any setAnimation(),
+   activeAnimation is nullptr and activeAnimation->getFrames()
+   dereferences null -> crash.
+
+   Fix (animation.cpp), one-line guard at the top:
+       if(!activeAnimation) { return Rectangle{0,0,0,0}; }
+
+----------------------------------------------------------------------
+[MINOR]
+----------------------------------------------------------------------
+
+X 6. registry.add is still a TODO in animation.cpp -- declared in the
+   header but unimplemented, so it won't link if called.
+   Trivial:
+       registry[id] = std::move(anim);
+
+X 7. reset() only nulls activeAnimation but leaves isPlaying / frameIdx /
+   accumulator as-is. If isPlaying is left true after a reset, the next
+   getSource() hits the null-deref from #5. Consider resetting all four
+   fields.
+
+X 8. printf debug strings lack '\n' so they smear together in the
+   console. Fine for now, just noting.0
+
+9. getSource() advances at most one frame per call. If a frame's time
+   is shorter than the real frametime (lag spike, or a very fast
+   animation), it won't "catch up." Usually fine for 2D -- flagging
+   only so it's a conscious choice. Changing the if to a while would
+   make it catch up.
+
+----------------------------------------------------------------------
+[LATER / FEATURES]
+----------------------------------------------------------------------
+
+- Add Text drawable.
+- Add Tile drawable.
+- Add mutational methods for coords and width/height (Drawable).
+
+----------------------------------------------------------------------
+[LIBRARY / DISTRIBUTION READINESS]
+----------------------------------------------------------------------
+Goal: make this a real "download, include, and use" library, not something
+that only builds on my machine. Right now a stranger who clones this can only
+use it by vendoring (copying the animation/ draw/ assets/ folders into their
+own project and compiling the .cpp files alongside their code). The design is
+library-shaped; what's missing is the distribution/packaging layer.
+
+[CRITICAL]
+
+X 1. Hidden hard dependency on rang.hpp.  [DONE 2026-06-06]
+   Removed the rang include and all rang color codes; logs now use plain
+   std::cerr. No external header dependency remains.
+   animation/animation.h does #include "rang.hpp", but rang.hpp is NOT in the
+   repo -- it only exists locally at /usr/local/include/rang.hpp. Anyone who
+   clones this won't compile at all until they separately install rang. Worse,
+   it's pulled in through a PUBLIC header, so it leaks onto every consumer.
+   Options:
+     - vendor rang.hpp into the repo (e.g. third_party/), OR
+     - document it as a hard prerequisite, OR
+     - (cleanest) stop logging from library headers entirely -- see item 4,
+       which removes the rang dependency altogether.
+
+X 2. No namespace -- name collisions waiting to happen.  [DONE 2026-06-06]
+   All public types now wrapped in `namespace rad2d { ... }`.
+   Everything is global: Frame, Animation, Sprite, Drawable, AnimRule,
+   TextureRegistry, FontRegistry, AnimationRegistry, AnimationState. These are
+   extremely common names; the moment a consumer's project (or another lib)
+   also defines a Sprite or Frame, it won't compile.
+   Fix: wrap all public types in a namespace, e.g. namespace anim { ... }.
+
+[MODERATE]
+
+X 3. No packaging / single include path.  [DONE 2026-06-06]
+   Added umbrella header rad2d.hpp and a CMakeLists.txt that builds
+   librad2d.a, exposes the rad2d::rad2d target, and supports add_subdirectory
+   / FetchContent. (find_package still needs a Config file -- see RELEASE item 2.)
+   A consumer currently has to include three separate headers and manually add
+   three .cpp files to their build. Easy wins:
+     - umbrella header (e.g. anim/anim.h or animation.hpp) that includes all
+       three module headers, so users include one thing.
+     - a build target that produces a static lib (libanimation.a) plus an
+       install rule -- OR a CMakeLists.txt so people can use add_subdirectory /
+       FetchContent. CMake is what gives the real "download and use" experience
+       and is already flagged as the migration target in the Makefile.
+
+~ 4. Library prints to std::cout itself.  [PARTIAL 2026-06-06]
+   Moved off std::cout/rang to std::cerr, which removed the rang dep. But the
+   library still writes to the console unconditionally -- the real fix (return
+   codes / caller-settable log callback / compile logging out by default) is
+   still TODO.
+   get(), getSource(), setAnimation(), etc. write errors/warnings straight to
+   stdout via rang. A library spamming a consumer's console is a no-no, and
+   it's the ONLY reason rang is a dependency at all. Replace with returned
+   error codes / a caller-settable log callback, or compile logging out by
+   default. Doing this also resolves item 1.
+
+[MINOR]
+
+5. Example won't run out-of-the-box after a clone.
+   .gitignore ignores *.png and *.txt, so test_anim.png (the example's sprite
+   sheet) isn't committed. A fresh clone gets the code but not the asset the
+   demo needs. Not a library blocker, but the demo won't run for others.
+   Consider committing the sample asset (force-add, or carve an assets/
+   exception in .gitignore).
+
+Suggested order: 2 (namespace) -> 4 (logging, which kills the rang dep) ->
+3 (CMake + umbrella header). 1 and 5 fall out along the way.
+
+----------------------------------------------------------------------
+[BETA 0.1 RELEASE READINESS]  (assessment 2026-06-06)
+----------------------------------------------------------------------
+Verdict: close, but not quite. Library compiles clean (no warnings), both
+build systems (Make + CMake) work, API is coherent and the animation engine
+(timing accumulator, ping-pong, repeat) is solid. The gaps below are
+packaging/release hygiene, not core logic.
+
+[BLOCKERS] -- fix before tagging 0.1
+
+1. No LICENSE file.
+   Without one, a public release is legally unusable by anyone who clones it.
+   Suggested: Zlib (matches raylib's license) unless we prefer MIT.
+
+2. find_package(rad2d) does not actually work.
+   install(EXPORT ...) only writes rad2dTargets.cmake; find_package needs a
+   rad2dConfig.cmake (plus a version file via write_basic_package_version_file,
+   and find_dependency(raylib) so the transitive raylib link resolves).
+   add_subdirectory / FetchContent DO work today. Fix: generate the Config file
+   with configure_package_config_file, OR soften the README claim.
+   NOTE: README currently overstates this -- it says install provides a
+   find_package(rad2d) config. Keep README and CMake in sync.
+
+3. Demo asset isn't shipped.
+   test_anim.png is caught by the blanket *.png ignore (same trap that hid
+   CMakeLists.txt). Fresh clone can `make` but `make run` shows nothing, even
+   though the README says to run it. Fix: add `!test_anim.png` exception in
+   .gitignore (this is the same issue as DISTRIBUTION item 5 above).
+
+[SHOULD-FIX] -- cheap robustness / library etiquette
+
+4. TextureRegistry::get / FontRegistry::get use .at(id)  (assets.cpp:6,17).
+   Throws std::out_of_range on an unknown id -- a missing asset crashes the
+   consumer. Everywhere else the library logs + returns a sentinel
+   (nullptr / zero-rect). Make these log-and-return-null like
+   AnimationRegistry::get for consistency.
+
+[OPTIONAL] -- not blocking 0.1
+
+5. AnimationState::getSource() indexes frames.at(frameIdx) (animation.cpp:
+   102,110,...). An Animation built with an empty frame vector throws.
+   A one-line guard would make it safe.
+
+6. Unused includes: assets.h pulls in <map> and <stdio.h> but doesn't use them.
+
+7. No CHANGELOG.md and no version macro in a public header (e.g.
+   RAD2D_VERSION_MAJOR/MINOR). Nice-to-have for tracking releases.
