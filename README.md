@@ -1,9 +1,5 @@
 # RAD-2D
 
-> ⚠️ **Beta.** The full drawable set — `Sprite`, `Background`, `Text`, `UI`, and
-> `Tilemap` — is in place and building. APIs may still shift before 1.0. See
-> [Status & roadmap](#status--roadmap).
-
 **RAD-2D** (Raylib Animation & Drawing, 2D) is a **2D drawing and animation
 wrapper** for [raylib](https://www.raylib.com/), written in C++17.
 
@@ -29,6 +25,9 @@ You still call raylib directly for the window and frame loop (`InitWindow`,
 `BeginDrawing`, …) — this library sits on top to remove the bookkeeping, not to
 hide raylib from you.
 
+> 📖 **Full usage guide:** see **[DOCUMENTATION.md](DOCUMENTATION.md)** for the
+> complete walkthrough of every type and how the pieces fit together.
+
 ---
 
 ## Quick start
@@ -46,12 +45,12 @@ enum TextureKey { SHEET };
 enum AnimId     { IDLE };
 
 int main() {
-    InitWindow(1080, 720, "Animation Library - Example");
+    InitWindow(1080, 720, "RAD-2D");
     SetTargetFPS(60);
 
     // Load the sprite sheet. The registry owns it and unloads it for you.
     TextureRegistry textures;
-    textures.load(SHEET, "test_anim.png");
+    textures.load(SHEET, "player.png");
 
     // Register a looping animation: frames 0-2, each shown for 0.3s.
     // AnimRule(isRepeating, returnToFirstFrame, pingPong)
@@ -84,187 +83,8 @@ int main() {
 }
 ```
 
-This is essentially `main.cpp`, the bundled example. Build and run it with
-`make run`.
-
----
-
-## Concepts
-
-> All types below live in the `rad2d` namespace. The snippets assume a
-> `using namespace rad2d;` (or prefix the types with `rad2d::`).
-
-### Assets — `assets/assets.h`
-
-`TextureRegistry` and `FontRegistry` are keyed stores for raylib resources.
-You load by id and retrieve a `shared_ptr`; the resource is unloaded
-(`UnloadTexture` / `UnloadFont`) automatically when the last reference goes
-away.
-
-```cpp
-TextureRegistry textures;
-textures.load(SHEET, "player.png");
-std::shared_ptr<Texture2D> tex = textures.get(SHEET);
-```
-
-Using plain `int` ids means you can back them with an `enum` for readable,
-collision-free keys.
-
-### Animations — `animation/animation.h`
-
-An animation is an ordered list of **frames**. Each `Frame` is a duration plus
-the source rectangle to crop from the sprite sheet:
-
-```cpp
-Frame(0.30f, Rectangle{ 0, 0, 64, 64 });  // show this 64x64 crop for 0.3s
-```
-
-Playback behaviour is controlled by an `AnimRule`:
-
-| Field                | Effect                                                          |
-| -------------------- | -------------------------------------------------------------- |
-| `isRepeating`        | Loop forever instead of stopping after one pass.               |
-| `returnToFirstFrame` | When a non-repeating animation finishes, snap back to frame 0. |
-| `pingPong`           | Play forward to the end, then bounce back to the start.        |
-
-```cpp
-AnimRule(/*isRepeating=*/true, /*returnToFirstFrame=*/false, /*pingPong=*/false);
-```
-
-`Animation`s are immutable, shared data. Store them in an `AnimationRegistry`
-(again keyed by id) so many sprites can share a single definition:
-
-```cpp
-AnimationRegistry anims;
-anims.add(RUN, std::make_shared<Animation>("run", frames, rules));
-```
-
-### Drawables & sprites — `draw/draw.h`
-
-`Drawable` is the base for anything rendered on screen — it owns position
-(`x`, `y`, `z`-layer) and size, with getters/setters for each.
-
-`Sprite` is a `Drawable` that pairs a texture with an animation:
-
-```cpp
-Sprite player("player", &anims, /*x*/100, /*y*/100, /*z*/0, /*w*/256, /*h*/256);
-player.setTexture(textures.get(SHEET));
-
-player.addAnimation(IDLE);          // declare which registry animations it may use
-player.addAnimation(RUN);
-
-player.setAnimation(RUN, true);     // make one active and start playing
-player.stop();                      // pause (optionally reset to frame 0)
-player.play();                      // resume
-player.draw();                      // advance by elapsed time + render
-```
-
-A sprite holds a **non-owning** pointer to the `AnimationRegistry` and a set of
-ids it is allowed to use. The actual `Animation` data lives in the registry and
-is fetched on `setAnimation`, so definitions are shared rather than copied per
-sprite.
-
-This is the payoff of the central registry: define an animation once and let
-many sprites reuse it. If your characters share a sprite-sheet layout, a single
-`WALK` animation can drive all of them — you only describe the frames in one
-place.
-
-```cpp
-// One shared definition...
-anims.add(WALK, std::make_shared<Animation>("walk", walkFrames, AnimRule(true, false, false)));
-
-// ...used by many sprites.
-Sprite hero  ("hero",  &anims, 100, 100, 0, 64, 64);
-Sprite goblin("goblin", &anims, 300, 100, 0, 64, 64);
-
-for (Sprite* s : { &hero, &goblin }) {
-    s->setTexture(textures.get(SHEET));
-    s->addAnimation(WALK);
-    s->setAnimation(WALK, /*play=*/true);
-}
-```
-
-Timing is handled by an internal `AnimationState` that accumulates raylib's
-frame delta and drains it frame-by-frame, so playback stays correct (and
-catches up after a lag spike) regardless of render frame rate.
-
-`Sprite`, `UI`, and `Background` all share an `AnimatedDrawable` base that holds
-the registry pointer, the usable-animation set, and the `AnimationState` — so the
-animation plumbing (`addAnimation` / `setAnimation` / `play` / `stop`) lives in
-one place.
-
-### Backgrounds — `draw/draw.h`
-
-`Background` fills an area with a texture in one of two modes:
-
-- **Scroll** — a single tileable texture slid via `TEXTURE_WRAP_REPEAT` for a
-  seamless infinite loop. Great for parallax: stack several at different
-  `setScrollSpeed`s and z-layers.
-- **Animated** — when an animation from the registry is active, its current
-  frame is drawn across the area instead.
-
-```cpp
-Background stars("stars", nullptr, 0, 0, 0, 1080, 720); // nullptr = scroll only
-stars.setTexture(textures.get(STARS));
-stars.setScrollSpeed(20.0f, 0.0f);                      // drift right at 20 px/s
-```
-
-(The two modes don't combine: GPU wrap tiles the whole texture, not one frame of
-a sheet.)
-
-### Text — `draw/draw.h`
-
-`Text` renders a string glyph-by-glyph, which enables a **typewriter** reveal and
-per-glyph **effects** (shake, wave, fade). It's the rendering half of a text
-system — a markup/dialogue layer can sit on top and drive it.
-
-```cpp
-Text line("dialogue", 40, 40, 0);
-line.setFont(fonts.get(MAIN));         // omit for raylib's default font
-line.setText("* You feel determined.");
-line.enableTypewriter(20.0f);          // 20 chars/sec
-line.setEffect(TextEffect::WAVE);
-line.setOnReveal([&](int i, int cp){ /* play a blip sound */ });
-// line.revealAll();  line.isFinished();
-```
-
-### UI — `draw/draw.h`
-
-`UI` is a composite HUD element: an (optionally animated) **background** texture,
-an optional **icon**, and an optional **`Text`**. Any piece may be left unset; the
-icon is positioned relative to the element, and the background animates via the
-shared registry.
-
-```cpp
-UI box("textbox", &anims, 40, 380, 10, 480, 96);
-box.setBackground(textures.get(TEXTBOX));
-box.setIcon(textures.get(PORTRAIT));
-box.setIconOffset(8, 8);
-box.setText(&line);
-box.draw();   // background -> icon -> text
-```
-
-### Tiles — `tiles/tiles.h`
-
-A `TileSet` maps **tile ids** (what your map data stores) to definitions — static
-or animated (animated tiles pull from the shared registry). A `Tilemap` is a
-single z-layer holding a flat, row-major grid of ids (`0` = empty); stack several
-for multi-layer maps. The map *format* (JSON/CSV/…) lives in your game; you feed
-the parsed ids in.
-
-```cpp
-TileSet tiles(&anims);
-tiles.defineTile(1, textures.get(SHEET), { 0, 0, 16, 16 });   // static
-tiles.defineAnimatedTile(2, textures.get(SHEET), WATER_ANIM); // animated
-
-Tilemap ground("ground", &tiles, 0, 0, 0, /*tileSize*/16);
-ground.setTiles({ 1,1,2,0,
-                  1,2,2,1 }, /*cols*/4, /*rows*/2);
-
-// in the loop:
-tiles.update();   // once per frame: advances animated tiles in sync
-ground.draw();
-```
+For a complete tour of sprites, backgrounds, text, UI, and tilemaps, read
+**[DOCUMENTATION.md](DOCUMENTATION.md)**.
 
 ---
 
@@ -277,7 +97,7 @@ its CMake config or `pkg-config`). There are no other dependencies.
 
 ```bash
 cmake -S . -B build
-cmake --build build      # produces librad2d.a + the ./build/rad2d_example demo
+cmake --build build      # produces librad2d.a
 ```
 
 To consume the library from your own CMake project, vendor it (or use
@@ -294,11 +114,10 @@ just works. `cmake --install build` also installs the library, headers, and a
 
 ### Make
 
-The Makefile builds the bundled example on Linux:
+The Makefile builds the static library on Linux:
 
 ```bash
-make        # build the example -> ./rad2d_example
-make run    # build (if needed) and run it
+make        # build librad2d.a
 make clean  # remove build artifacts
 ```
 
@@ -307,8 +126,8 @@ compile the `.cpp` files alongside your code:
 
 ```bash
 g++ -std=c++17 your_app.cpp \
-    animation/animation.cpp draw/draw.cpp assets/assets.cpp \
-    -I. $(pkg-config --libs raylib) -o your_app
+    animation/animation.cpp draw/draw.cpp assets/assets.cpp tiles/tiles.cpp \
+    -I. $(pkg-config --cflags --libs raylib) -o your_app
 ```
 
 ---
@@ -321,24 +140,14 @@ animation/      Frame, AnimRule, Animation, AnimationRegistry, AnimationState
 assets/         TextureRegistry, FontRegistry
 draw/           Drawable + AnimatedDrawable, Sprite, Background, Text, UI
 tiles/          Tile, TileSet, Tilemap
-main.cpp        Example / demo program
-CMakeLists.txt  Library + example build (packaging / install)
-Makefile        Simple Linux build of the example
+CMakeLists.txt  Library build (packaging / install)
+Makefile        Simple Linux build of the static library
+DOCUMENTATION.md  Full usage guide and API reference
 ```
 
 ---
 
-## Status & roadmap
+## Documentation
 
-**Beta.** All five drawable types are implemented and building — `Sprite`,
-`Background`, `Text`, `UI`, and `Tilemap`. Still to come:
-
-- A **markup / dialogue layer** on top of `Text` (control codes for pauses and
-  color, voice blips, box advancement) — `Text` already exposes the hooks for it.
-- **Non-square / combined** tile and background modes (e.g. a scrolling *and*
-  animated background via manual tiling).
-- Additional drawing/animation conveniences, and API polish toward 1.0.
-
-`Drawable` is stored polymorphically (e.g.
-`std::vector<std::unique_ptr<Drawable>>`) so every drawable type — current and
-future — shares the same render path.
+The full API walkthrough lives in **[DOCUMENTATION.md](DOCUMENTATION.md)**.
+Version history is in **[CHANGELOG.md](CHANGELOG.md)**.

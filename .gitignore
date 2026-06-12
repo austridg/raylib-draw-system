@@ -1,26 +1,13 @@
 # Images
 *.png
-# example / game art used by the demo (kept despite the blanket *.png ignore above)
-!test_anim.png
-!bad_guy1.png
-!bad_guy2.png
-!bad_guy3.png
-!bullet.png
-!bullet_blast.png
-!example_tileset.png
-!moon.png
-!pointer_shooter.png
-!space_background.png
-!space_general.png
-!textbox.png
 
 # Build artifacts
 *.o
 *.obj
 *.exe
 *.out
-rad2d_example
-anim_example
+*.a
+librad2d.a
 build/
 bin/
 

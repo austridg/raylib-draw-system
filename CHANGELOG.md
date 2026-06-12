@@ -4,6 +4,19 @@ All notable changes to RAD-2D are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and the project aims
 to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-06-12
+
+### Changed
+- RAD-2D is now distributed purely as a library. The bundled example program
+  (`main.cpp`) and its demo art assets have been removed.
+- The Makefile now builds the static library (`librad2d.a`) instead of the
+  example; CMake no longer builds an example target.
+- Reworked the README into a focused landing page and moved the full usage guide
+  into a new **`DOCUMENTATION.md`**.
+
+### Removed
+- The "Status & roadmap" section from the README.
+
 ## [0.2.0] - 2026-06-11
 
 ### Added
