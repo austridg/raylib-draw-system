@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(rad2d VERSION 0.2.0 LANGUAGES CXX)
+project(rad2d VERSION 0.3.0 LANGUAGES CXX)
 
 # ---------------------------------------------------------------------------
 # RAD-2D: a small raylib-based drawing/animation wrapper for 2D games.
@@ -9,15 +9,6 @@ project(rad2d VERSION 0.2.0 LANGUAGES CXX)
 #   FetchContent_Declare(...)          # fetched at configure time
 # then link against the `rad2d::rad2d` target.
 # ---------------------------------------------------------------------------
-
-# Only build the example when this is the top-level project (not when another
-# project pulls us in via add_subdirectory / FetchContent).
-if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    set(RAD2D_IS_TOP_LEVEL ON)
-else()
-    set(RAD2D_IS_TOP_LEVEL OFF)
-endif()
-option(RAD2D_BUILD_EXAMPLE "Build the example program" ${RAD2D_IS_TOP_LEVEL})
 
 # --- raylib dependency -----------------------------------------------------
 # Prefer raylib's installed CMake config; fall back to pkg-config.
@@ -46,12 +37,6 @@ target_include_directories(rad2d PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:include>
 )
-
-# --- example ---------------------------------------------------------------
-if(RAD2D_BUILD_EXAMPLE)
-    add_executable(rad2d_example main.cpp)
-    target_link_libraries(rad2d_example PRIVATE rad2d::rad2d)
-endif()
 
 # --- install ---------------------------------------------------------------
 include(GNUInstallDirs)

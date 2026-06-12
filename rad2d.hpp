@@ -7,7 +7,7 @@
 // Everything lives in the `rad2d` namespace.
 
 #define RAD2D_VERSION_MAJOR 0
-#define RAD2D_VERSION_MINOR 2
+#define RAD2D_VERSION_MINOR 3
 #define RAD2D_VERSION_PATCH 0
 
 #include "animation/animation.h"
